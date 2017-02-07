@@ -3,6 +3,7 @@
 # tournament.py -- implementation of a Swiss-system tournament
 #
 
+from __future__ import division, print_function
 import psycopg2
 
 
@@ -14,25 +15,37 @@ def connect():
 def deleteMatches():
     """Remove all the match records from the database."""
 
-
 def deletePlayers():
     """Remove all the player records from the database."""
-
+    conn = connect()
+    cur  = conn.cursor()
+    cur.execute("DELETE FROM players")
+    conn.commit()
+    conn.close()
 
 def countPlayers():
     """Returns the number of players currently registered."""
+    conn = connect()
+    cur  = conn.cursor()
+    cur.execute("SELECT count(*) FROM players;")
+    num_players_from_db = cur.fetchone()
+    conn.close()
+    print(num_players_from_db)
+    return num_players_from_db[0]
 
 
 def registerPlayer(name):
-    """Adds a player to the tournament database.
-  
-    The database assigns a unique serial id number for the player.  (This
-    should be handled by your SQL database schema, not in your Python code.)
-  
+    """Adds a player to the tournament database.  
+
+    The database assigns a unique serial id number for the player.  
     Args:
       name: the player's full name (need not be unique).
-    """
-
+    """    
+    conn = connect()
+    cur  = conn.cursor()
+    cur.execute("INSERT INTO players(name) VALUES(%s)", (name,))
+    conn.commit()
+    conn.close()
 
 def playerStandings():
     """Returns a list of the players and their win records, sorted by wins.
@@ -51,7 +64,7 @@ def playerStandings():
 
 def reportMatch(winner, loser):
     """Records the outcome of a single match between two players.
-
+    
     Args:
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
