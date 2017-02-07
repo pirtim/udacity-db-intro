@@ -2,6 +2,7 @@
 # 
 # tournament.py -- implementation of a Swiss-system tournament
 #
+# TODO (only newest version psycopg2): use with statement
 
 from __future__ import division, print_function
 import psycopg2
@@ -31,8 +32,6 @@ def deletePlayers():
 
 def countPlayers():
     """Returns the number of players currently registered."""    
-    # with connect() as conn:
-    #     with conn.cursor() as cur:
     conn = connect()
     cur  = conn.cursor()
     cur.execute("SELECT count(*) FROM players;")
@@ -69,25 +68,8 @@ def playerStandings():
     """
     conn = connect()
     cur  = conn.cursor()
-    cur.execute('''
-        SELECT p.id, p.name, SUM(CASE WHEN p.id=m.winner_id THEN 1 ELSE 0 END) as wins, count(m.id)
-        FROM players as p 
-            LEFT JOIN matches_participant as mp
-                JOIN matches as m
-                ON m.id=mp.match_id
-            ON p.id=mp.player_id
-        GROUP BY p.id
-        ORDER BY wins DESC;
-        ''')
+    cur.execute("SELECT id, name, wins, matches_played FROM standings")   
     standings = cur.fetchall()
-    # print()
-    # print(standings)
-    # print()
-    # match_id = cur.fetchone()[0]
-    # print(match_id)
-    # cur.execute("INSERT INTO matches_participant VALUES(%s, %s);", (match_id, loser ))
-    # cur.execute("INSERT INTO matches_participant VALUES(%s, %s);", (match_id, winner))
-    # conn.commit()
     conn.close()
     return standings 
 
@@ -103,7 +85,6 @@ def reportMatch(winner, loser):
     cur  = conn.cursor()
     cur.execute("INSERT INTO matches(winner_id) VALUES(%s) RETURNING id;", (winner,))
     match_id = cur.fetchone()[0]
-    # print('match id: ', match_id)
     cur.execute("INSERT INTO matches_participant VALUES(%s, %s);", (match_id, loser ))
     cur.execute("INSERT INTO matches_participant VALUES(%s, %s);", (match_id, winner))
     conn.commit()
@@ -125,5 +106,15 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-
-
+    conn = connect()
+    cur  = conn.cursor()
+    cur.execute('''
+        SELECT a.id, a.name, b.id, b.name 
+        FROM standings_with_id as a, standings_with_id as b 
+        WHERE a.id_entry + 1  = b.id_entry
+        AND a.id_entry % 2 = 1
+        ''')
+    standings = cur.fetchall()
+    conn.close()
+    return standings 
+    
