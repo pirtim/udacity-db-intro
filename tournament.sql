@@ -9,4 +9,14 @@
 CREATE TABLE players (
     id serial primary key,
     name text
-)
+);
+
+CREATE TABLE matches (
+    id serial primary key,
+    winner_id integer references players
+);
+
+CREATE TABLE matches_participant (
+    match_id integer references matches,
+    player_id integer references players
+);

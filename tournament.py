@@ -14,6 +14,12 @@ def connect():
 
 def deleteMatches():
     """Remove all the match records from the database."""
+    conn = connect()
+    cur  = conn.cursor()
+    cur.execute("DELETE FROM matches_participant")
+    cur.execute("DELETE FROM matches")
+    conn.commit()
+    conn.close()
 
 def deletePlayers():
     """Remove all the player records from the database."""
@@ -24,13 +30,14 @@ def deletePlayers():
     conn.close()
 
 def countPlayers():
-    """Returns the number of players currently registered."""
+    """Returns the number of players currently registered."""    
+    # with connect() as conn:
+    #     with conn.cursor() as cur:
     conn = connect()
     cur  = conn.cursor()
     cur.execute("SELECT count(*) FROM players;")
     num_players_from_db = cur.fetchone()
     conn.close()
-    print(num_players_from_db)
     return num_players_from_db[0]
 
 
@@ -60,6 +67,29 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
+    conn = connect()
+    cur  = conn.cursor()
+    cur.execute('''
+        SELECT p.id, p.name, SUM(CASE WHEN p.id=m.winner_id THEN 1 ELSE 0 END) as wins, count(m.id)
+        FROM players as p 
+            LEFT JOIN matches_participant as mp
+                JOIN matches as m
+                ON m.id=mp.match_id
+            ON p.id=mp.player_id
+        GROUP BY p.id
+        ORDER BY wins DESC;
+        ''')
+    standings = cur.fetchall()
+    # print()
+    # print(standings)
+    # print()
+    # match_id = cur.fetchone()[0]
+    # print(match_id)
+    # cur.execute("INSERT INTO matches_participant VALUES(%s, %s);", (match_id, loser ))
+    # cur.execute("INSERT INTO matches_participant VALUES(%s, %s);", (match_id, winner))
+    # conn.commit()
+    conn.close()
+    return standings 
 
 
 def reportMatch(winner, loser):
@@ -69,6 +99,15 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
+    conn = connect()
+    cur  = conn.cursor()
+    cur.execute("INSERT INTO matches(winner_id) VALUES(%s) RETURNING id;", (winner,))
+    match_id = cur.fetchone()[0]
+    # print('match id: ', match_id)
+    cur.execute("INSERT INTO matches_participant VALUES(%s, %s);", (match_id, loser ))
+    cur.execute("INSERT INTO matches_participant VALUES(%s, %s);", (match_id, winner))
+    conn.commit()
+    conn.close()
  
  
 def swissPairings():
